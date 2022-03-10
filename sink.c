@@ -16,18 +16,44 @@ static int r_parent_stderr = r_stderr;
 #define LIKELY(e) __builtin_expect((e) != 0, 1)
 #define UNLIKELY(e) __builtin_expect((e) != 0, 0)
 
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+
+#ifdef DEBUG
+#define dprintf(...) eprintf(__VA_ARGS__)
+#else
+//#pragma GCC diagnostic ignored "-Wunused
+#define dprintf(...) ((void)0)
+#endif
+
+#ifdef REPLACE_STDERR
+#define _replace_stderr
+#else
+#define _replace_stderr __attribute__((unused))
+#endif
+
 /// Private dup (F_DUPFD_CLOEXEC)
+_replace_stderr
 static inline int pdup(int fd)
 {
 	return fcntl(fd, F_DUPFD_CLOEXEC, fd);
 }
 
+__attribute__((unused)) // No longer needed
 static inline int pfd(int fd)
 {
 	return fcntl(fd, FD_CLOEXEC);
 }
 
-/// Save r_stderr -> b_stderr. and replace the `stderr` stream fd with this CLOEXEC'd dup of 
+__attribute__((pure))
+_replace_stderr
+static int fdreopen(FILE** stream, int with, const char mode[static 1])
+{
+	if(UNLIKELY( fclose(*stream) != 0 )) return (perror("failed to close stream to fdreopen"), 0);
+	return (*stream = fdopen(with, mode)) != NULL;
+}
+
+/// Save r_stderr -> b_stderr. and replace the `stderr` stream with a new wrapper around the CLOEXEC'd `dup()` of `r_stderr`.
+_replace_stderr
 static int save_stderr()
 {
 	/*if(UNLIKELY( (b_stderr = dup(r_stderr)) < 0 )) {
@@ -39,12 +65,18 @@ static int save_stderr()
 		perror("failed to pdup(stderr)");
 		return 0;
 	}
+#if 0
 	int sfd = fileno(stderr);
-	if(UNLIKELY( dup2(b_stderr, sfd = fileno(stderr)) < 0 )) {
+	if(UNLIKELY( dup2(b_stderr, sfd) < 0 )) {
 		perror("failed to dup2() to stderr");
 		return 0;
-	} else if(UNLIKELY( pfd(sfd) < 0 )) return (perror("failed to (redundantly?) FD_CLOEXEC b_stderrr"),0); // TODO: XXX: Does dup2() copy the CLOEXEC flag? Find out, and it it does, remove this line.
-
+	} //else if(UNLIKELY( pfd(sfd) < 0 )) return (perror("failed to (redundantly?) FD_CLOEXEC b_stderrr"),0); // TODO: XXX: Does dup2() copy the CLOEXEC flag? Find out, and it it does, remove this line.
+#else
+	if(UNLIKELY( !fdreopen(&stderr, b_stderr, "wb") )) {
+		perror("failed to reopen parent stderr with pdup()'d stream");
+		return 0;
+	}
+#endif
 	return 1;
 }
 
@@ -59,17 +91,16 @@ static inline int dupall(int from)
 		return 2;
 	}
 
+	
+#ifdef REPLACE_STDERR
+	// Save parent's stderr to a private one
 	if(UNLIKELY(!save_stderr())) {
 		return 3;
 	}
-#if defined(REPLACE_STDERR) && !defined(DEBUG) /* XXX: We may be removing this section soon, for now just leave it though */
-	close(b_stderr);
+
+	// Replace the child's stderr with null
 	if(UNLIKELY(dup2(from, r_stderr) < 0)) {
-		perror("failed to dup2() stderr to sink");
-/*#else
-	if(UNLIKELY(close(r_stderr) != 0)) {
-		perror("failed to close stderr");
-		*/
+		perror("failed to dup2() r_stderr to sink");
 		return 3;
 	}
 #endif
@@ -95,18 +126,17 @@ static int path_lookup(size_t sz; const char name[restrict static 1], char fullp
 
 	while((item = strsep(&paths, ":")) != NULL) {
 		if(UNLIKELY( ((size_t)snprintf(fullpath, sz, "%s/%s", item, name)) >= sz )) {
-#if defined(DEBUG) || !defined(REPLACE_STDERR)
-			fprintf(stderr, "Warning: normalised path item '%s' truncated (from %s/%s). Full path was longer than %lu bytes\n", fullpath, item, name, sz);
-#endif
+			dprintf("Warning: normalised path item '%s' truncated (from %s/%s). Full path was longer than %lu bytes\n", fullpath, item, name, sz);
 			errno = ENAMETOOLONG;
 			continue;
 		}
+		dprintf(">> PATH search in `%s'... ", item);
 		if(path_exists(fullpath)) {
+			dprintf("FOUND\n");
 			found = 1;
 			break;
-		}
+		} else dprintf("failed\n");
 	}
-
 	free(_tmpfree);
 	return found;
 }
@@ -166,15 +196,6 @@ int main(int argc, char** argv, char** envp)
 	if(LIKELY(!rc)) close(null);
 	else return rc;
 
-#if defined(REPLACE_STDERR) && !defined(DEBUG)
-#define perror(v) ((void)(v)) 
-#pragma GCC diagnostic ignored "-Wunused-value"
-#define eprintf(...) ((void)(__VA_ARGS__))
-#else
-#define eprintf(...) fprintf(stderr, __VA_ARGS__)
-#endif
-
-
 	if(argv[1]) {
 #ifdef NO_SEARCH_PATH
 		if(UNLIKELY($execve(argv[1]) < 0)) {
@@ -185,19 +206,27 @@ int main(int argc, char** argv, char** envp)
 #define $try_execve(path) do { if(UNLIKELY($execve((path)) < 0))  { perror("execve() failed"); return errno; } else __builtin_unreachable(); } while(0)
 		const char* path = NULL;
 		int err = 0;
+
+		dprintf("Attempting to execve() direct path %s...\n", argv[1]);
+
 		if(LIKELY(($execve(argv[1]) < 0)
 			&& (err_not_found(err = errno))
 			&& (path = getenv("PATH")))) {
-			// Failed to exec raw pathname (not found), lookup in $PATH
+
+			dprintf("Failed to exec raw pathname %s, lookup in PATH (%s)\n", argv[1], path);
+
 			char fullpath[PATH_MAX+1];
 			errno = 0;
-			if(path_lookup(argv[1], fullpath, PATH_MAX, path)) $try_execve(fullpath);
-			else {
+			if(path_lookup(argv[1], fullpath, PATH_MAX, path)) {
+				dprintf("Attempting to execve() to found path %s...\n", fullpath);
+				$try_execve(fullpath);
+			} else {
 				eprintf("Error: failed to find %s in PATH\n", argv[1]);
 				return errno ?: -1;
 			}
 		} else {
 			if(UNLIKELY(!err)) err = errno;
+			dprintf("execve() failed in unexpected way with code %d (ENOENT? %s, PATH? %s)\n", err, err_not_found(err) ? "yes" : "no", path ?: "<null>");
 
 			if(err_not_found(err)) {
 				perror(path 
