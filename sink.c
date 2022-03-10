@@ -10,8 +10,43 @@
 #define r_stdout 1
 #define r_stderr 2
 
+static int r_parent_stderr = r_stderr;
+#define b_stderr r_parent_stderr
+
 #define LIKELY(e) __builtin_expect((e) != 0, 1)
 #define UNLIKELY(e) __builtin_expect((e) != 0, 0)
+
+/// Private dup (F_DUPFD_CLOEXEC)
+static inline int pdup(int fd)
+{
+	return fcntl(fd, F_DUPFD_CLOEXEC, fd);
+}
+
+static inline int pfd(int fd)
+{
+	return fcntl(fd, FD_CLOEXEC);
+}
+
+/// Save r_stderr -> b_stderr. and replace the `stderr` stream fd with this CLOEXEC'd dup of 
+static int save_stderr()
+{
+	/*if(UNLIKELY( (b_stderr = dup(r_stderr)) < 0 )) {
+		perror("failed to dup() parent stderr");
+		return 0;
+	}*/
+	fflush(stderr);
+	if(UNLIKELY( (b_stderr = pdup(r_stderr)) < 0 )) {
+		perror("failed to pdup(stderr)");
+		return 0;
+	}
+	int sfd = fileno(stderr);
+	if(UNLIKELY( dup2(b_stderr, sfd = fileno(stderr)) < 0 )) {
+		perror("failed to dup2() to stderr");
+		return 0;
+	} else if(UNLIKELY( pfd(sfd) < 0 )) return (perror("failed to (redundantly?) FD_CLOEXEC b_stderrr"),0); // TODO: XXX: Does dup2() copy the CLOEXEC flag? Find out, and it it does, remove this line.
+
+	return 1;
+}
 
 static inline int dupall(int from)
 {
@@ -23,7 +58,12 @@ static inline int dupall(int from)
 		perror("failed to dup2() stdout to sink");
 		return 2;
 	}
-#ifdef REPLACE_STDERR
+
+	if(UNLIKELY(!save_stderr())) {
+		return 3;
+	}
+#if defined(REPLACE_STDERR) && !defined(DEBUG) /* XXX: We may be removing this section soon, for now just leave it though */
+	close(b_stderr);
 	if(UNLIKELY(dup2(from, r_stderr) < 0)) {
 		perror("failed to dup2() stderr to sink");
 /*#else
@@ -55,7 +95,7 @@ static int path_lookup(size_t sz; const char name[restrict static 1], char fullp
 
 	while((item = strsep(&paths, ":")) != NULL) {
 		if(UNLIKELY( ((size_t)snprintf(fullpath, sz, "%s/%s", item, name)) >= sz )) {
-#if defined(DEBUG) && !defined(REPLACE_STDERR)
+#if defined(DEBUG) || !defined(REPLACE_STDERR)
 			fprintf(stderr, "Warning: normalised path item '%s' truncated (from %s/%s). Full path was longer than %lu bytes\n", fullpath, item, name, sz);
 #endif
 			errno = ENAMETOOLONG;
@@ -126,7 +166,7 @@ int main(int argc, char** argv, char** envp)
 	if(LIKELY(!rc)) close(null);
 	else return rc;
 
-#ifdef REPLACE_STDERR
+#if defined(REPLACE_STDERR) && !defined(DEBUG)
 #define perror(v) ((void)(v)) 
 #pragma GCC diagnostic ignored "-Wunused-value"
 #define eprintf(...) ((void)(__VA_ARGS__))
