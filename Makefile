@@ -1,4 +1,5 @@
 # `sink` - sinks all input to /dev/null
+# Usage: `sink [<program> [<args...>]]`
 #
 # Targets:
 # `sink` (default): stripped `release` target. output: `sink`

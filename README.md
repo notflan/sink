@@ -1,6 +1,16 @@
 # `sink` - sinks all input into `/dev/null`
 
-Re-routes `stdin`, `stdout` (and optionally, `stderr`) to `/dev/null`.
+Re-routes `stdin`, `stdout` (and optionally, `stderr`) of a program to `/dev/null`.
+
+## Usage
+Command usage is in the form of: `./sink [<program name> [<arguments...>]]`.
+
+Example:
+```shell
+$ sink /usr/bin/cat sink.c # Identical to `>>/dev/null 2>&1 cat sink.c`
+```
+
+When invoked with `<program name>`: `execve()`s into the program (if it exists or is found in `$PATH`) with `<arguments....>` and a passed-through `envp` (see below in *Compiler flags* on changing this behaviour.)
 
 ## Building
 
@@ -10,6 +20,8 @@ To build for debugging, run `make debug`.
 
 ### Compiler flags
 `-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the program's `stderr` stream to the sink as well. By default, it is closed after the other streams have been successfully rewritten.
+`-DNO_SEARCH_PATH` - Add to `CFLAGS` when building to prevent the program looking up its argument in the `PATH` environment variable.
+`-DNO_ENV` - Add to `CFLAGS` when building to prevent `envp` passthrough to the `execve()`'d program.
 
 ### Installation
 The program must have been built before installation, and installation and uninstallation must be done as root.
