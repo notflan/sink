@@ -6,8 +6,8 @@
 #define r_stdout 1
 #define r_stderr 2
 
-#define LIKELY(e) __builtin_expect(!!(e), 1)
-#define UNLIKELY(e) __builtin_expect(!!(e), 0)
+#define LIKELY(e) __builtin_expect((e) != 0, 1)
+#define UNLIKELY(e) __builtin_expect((e) != 0, 0)
 
 static inline int dupall(int from)
 {
@@ -39,5 +39,8 @@ int main(void)
 		perror("failed to open /dev/null");
 		return 1;
 	}
-	return dupall(null);
+	register int rc = dupall(null);
+	if(LIKELY(rc)) close(null);
+	return rc;
 }
+
