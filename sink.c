@@ -95,6 +95,7 @@ int main(int argc, char** argv, char** envp)
 
 #ifdef REPLACE_STDERR
 #define perror(v) ((void)(v)) 
+#pragma GCC diagnostic ignored "-Wunused-value"
 #define eprintf(...) ((void)(__VA_ARGS__))
 #else
 #define eprintf(...) fprintf(stderr, __VA_ARGS__)

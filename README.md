@@ -19,7 +19,7 @@ Run `make && sudo make install` to build with full optimisations and install `si
 To build for debugging, run `make debug`. 
 
 ### Compiler flags
-`-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the program's `stderr` stream to the sink as well. By default, it is closed after the other streams have been successfully rewritten.
+`-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the program's `stderr` stream to the sink as well. By default, it is left open.
 `-DNO_SEARCH_PATH` - Add to `CFLAGS` when building to prevent the program looking up its argument in the `PATH` environment variable.
 `-DNO_ENV` - Add to `CFLAGS` when building to prevent `envp` passthrough to the `execve()`'d program.
 
