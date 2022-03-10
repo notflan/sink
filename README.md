@@ -1,13 +1,14 @@
 # `sink` - sinks all input into `/dev/null`
 
-Re-routes `stdin`, `stdout` (and optionally, `stderr`) of a program to `/dev/null`.
+Small and fast util that re-routes `stdin`, `stdout` (and optionally, `stderr`) of a program to `/dev/null` without needing to spawn a (sub-)shell. 
+Can be useful in some situations (*see example below*.)
 
 ## Usage
 Command usage is in the form of: `./sink [<program name> [<arguments...>]]`.
 
 Example:
 ```shell
-$ sink /usr/bin/cat sink.c # Identical to `>>/dev/null 0>&1 cat sink.c`, but will not cause cat to error on `stdin` being a redirect to an output stream.
+$ sink cat sink.c # Identical to `>>/dev/null 0>&1 cat sink.c`, but will not cause cat to error on `stdin` being a redirect to an output stream.
 ```
 
 When invoked with `<program name>`: `execve()`s into the program (if it exists or is found in `$PATH`) with `<arguments....>` and a passed-through `envp` (see below in *Compiler flags* on changing this behaviour.)
@@ -22,6 +23,7 @@ To build for debugging, run `make debug`.
 * `-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the program's `stderr` stream to the sink as well. By default, it is left open.
 * `-DNO_SEARCH_PATH` - Add to `CFLAGS` when building to prevent the program looking up its argument in the `PATH` environment variable.
 * `-DNO_ENV` - Add to `CFLAGS` when building to prevent `envp` passthrough to the `execve()`'d program.
+* `-DDEBUG_IGNORE_SPLASH` - Do not print project and version info in debug builds on startup.
 
 ### Installation
 The program must have been built before installation, and installation and uninstallation must be done as root.
@@ -58,3 +60,6 @@ For installing *without* stripping the symbol table, run `sudo make install STRI
 #### Make overridable only
 * `STRIP` - Strip command for default output (stripped release) target (`make sink`). set `make STRIP=:` to prevent stripping entirely. (NOTE: When using `make install`, `STRIP=:` will not work, instead, paradoxically, set `STRIP=true`, they have the same effect for all targets)
 * `OUTPUT` - The name of the output binary from the default target, and the binary that `install`/`uninstall` targets look for.
+
+# License
+GPL'd with <3

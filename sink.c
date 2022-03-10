@@ -72,15 +72,48 @@ static int path_lookup(size_t sz; const char name[restrict static 1], char fullp
 }
 #endif // !NO_SEARCH_PATH
 
+#ifdef DEBUG
+static inline size_t count_list(const void*const* p)
+{
+	size_t n=0;
+	while(*p++) n+=1;
+	return n;
+}
+static void print_debug_info(int argc, char* const* argv, char* const* envp)
+{
+	fprintf(stderr, "[DEBUG BUILD]\n");
+#ifndef DEBUG_IGNORE_SPLASH
+	fprintf(stderr,  _PROJECT " v" _VERSION ": " _DESCRIPTION "\n");
+	fprintf(stderr, " :: written by " _AUTHOR " with <3 (License " _LICENSE ")\n---\n");
+#endif
+	fprintf(stderr, "> program: %s (path lookup: "
+#ifdef NO_SEARCH_PATH
+							"false"
+#else
+							"true"
+#endif
+			")\n", argv ? (argv[1] ?: "(unbound)") : "<invalid>" );
+	fprintf(stderr, "> argc (expected): %d\n", argc-1);
+	fprintf(stderr, "> argv: %p (# %lu)\n", (const void*)(argv+1), (argv+1) ? count_list((const void*const*)(argv+1)) : 0);
+	fprintf(stderr, "> environ: %p (# %lu)\n", (const void*)envp, LIKELY(envp) ? count_list((const void*const*)envp) : 0);
+	fprintf(stderr, "---\n");
+
+	fflush(stderr);
+}
+#else
+#define print_debug_info(a,b,c) ((void)((void)(a), (void)(b), (void)(c)))
+#endif
+
 int main(int argc, char** argv, char** envp)
 {
-	(void)argc;
 #ifdef NO_ENV
 	(void)envp;
 #define GET_ENV ((char*[]){NULL})
 #else
 #define GET_ENV envp
 #endif
+
+	print_debug_info(argc, argv, GET_ENV);
 
 #define $execve(path) execve((path), argv+1, GET_ENV)
 
