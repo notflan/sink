@@ -36,6 +36,7 @@ static inline int dupall(int from)
 	return 0;
 }
 
+#ifndef NO_SEARCH_PATH
 inline static int err_not_found(int er) {
 	return er == ENOENT;
 }
@@ -69,13 +70,14 @@ static int path_lookup(size_t sz; const char name[restrict static 1], char fullp
 	free(_tmpfree);
 	return found;
 }
+#endif // !NO_SEARCH_PATH
 
 int main(int argc, char** argv, char** envp)
 {
 	(void)argc;
 #ifdef NO_ENV
-#define GET_ENV ((char*[]){})
 	(void)envp;
+#define GET_ENV ((char*[]){NULL})
 #else
 #define GET_ENV envp
 #endif
@@ -100,7 +102,7 @@ int main(int argc, char** argv, char** envp)
 
 
 	if(argv[1]) {
-#if NO_SEARCH_PATH
+#ifdef NO_SEARCH_PATH
 		if(UNLIKELY($execve(argv[1]) < 0)) {
 			perror("execve() failed");
 			return errno;
