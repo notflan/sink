@@ -7,7 +7,7 @@ Command usage is in the form of: `./sink [<program name> [<arguments...>]]`.
 
 Example:
 ```shell
-$ sink /usr/bin/cat sink.c # Identical to `>>/dev/null 2>&1 cat sink.c`
+$ sink /usr/bin/cat sink.c # Identical to `>>/dev/null 0>&1 cat sink.c`, but will not cause cat to error on `stdin` being a redirect to an output stream.
 ```
 
 When invoked with `<program name>`: `execve()`s into the program (if it exists or is found in `$PATH`) with `<arguments....>` and a passed-through `envp` (see below in *Compiler flags* on changing this behaviour.)
@@ -19,9 +19,9 @@ Run `make && sudo make install` to build with full optimisations and install `si
 To build for debugging, run `make debug`. 
 
 ### Compiler flags
-`-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the program's `stderr` stream to the sink as well. By default, it is left open.
-`-DNO_SEARCH_PATH` - Add to `CFLAGS` when building to prevent the program looking up its argument in the `PATH` environment variable.
-`-DNO_ENV` - Add to `CFLAGS` when building to prevent `envp` passthrough to the `execve()`'d program.
+* `-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the program's `stderr` stream to the sink as well. By default, it is left open.
+* `-DNO_SEARCH_PATH` - Add to `CFLAGS` when building to prevent the program looking up its argument in the `PATH` environment variable.
+* `-DNO_ENV` - Add to `CFLAGS` when building to prevent `envp` passthrough to the `execve()`'d program.
 
 ### Installation
 The program must have been built before installation, and installation and uninstallation must be done as root.
@@ -41,10 +41,10 @@ To build optimised without stripping the symbol table, run `make release` or `ma
 For installing *without* stripping the symbol table, run `sudo make install STRIP=true`; the effect is the same as `STRIP=:` which does not work for the `install` target.
 
 ### Other targets
-`sink` (**default**): stripped `release` target. output: `sink`
-`release`: optimised build. output: `sink-release`
-`debug`: unoptimised build with debuginfo. output: `sink-debug`
-`clean`: remove all previous object and binary output files
+* `sink` (**default**): stripped `release` target. output: `sink`
+* `release`: optimised build. output: `sink-release`
+* `debug`: unoptimised build with debuginfo. output: `sink-debug`
+* `clean`: remove all previous object and binary output files
 
 ### Environment variables
 * `PREFIX` - The installation path prefix. Defaults to `/usr/local` if not set.
