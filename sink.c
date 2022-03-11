@@ -30,7 +30,7 @@ static int r_parent_stderr = r_stderr;
 #define dprintf(...) ((void)0)
 #endif
 
-#ifdef REPLACE_STDERR
+#if FEATURE_HAS_FLAG(REPLACE_STDERR)
 #define _replace_stderr
 #else
 #define _replace_stderr __attribute__((unused))
@@ -97,7 +97,7 @@ static inline int dupall(int from)
 	}
 
 	
-#ifdef REPLACE_STDERR
+#if FEATURE_HAS_FLAG(REPLACE_STDERR)
 	// Save parent's stderr to a private one
 	if(UNLIKELY(!save_stderr())) {
 		return 3;
@@ -112,7 +112,7 @@ static inline int dupall(int from)
 	return 0;
 }
 
-#ifndef NO_SEARCH_PATH
+#if ! FEATURE_HAS_FLAG(NO_SEARCH_PATH)
 inline static int err_not_found(int er) {
 	return er == ENOENT;
 }
@@ -145,7 +145,7 @@ static int path_lookup(size_t sz; const char name[restrict static 1], char fullp
 	free(_tmpfree);
 	return found;
 }
-#endif // !NO_SEARCH_PATH
+#endif // ! NO_SEARCH_PATH
 
 #ifdef DEBUG
 static inline size_t count_list(const void*const* p)
@@ -215,7 +215,7 @@ static void print_debug_info(int argc, char* const* argv, char* const* envp)
 
 int main(int argc, char** argv, char** envp)
 {
-#ifdef NO_ENV
+#if FEATURE_HAS_FLAG(NO_ENV)
 	(void)envp;
 #define GET_ENV ((char*[]){NULL})
 #else
@@ -236,7 +236,7 @@ int main(int argc, char** argv, char** envp)
 	else return rc;
 
 	if(argv[1]) {
-#ifdef NO_SEARCH_PATH
+#if FEATURE_HAS_FLAG(NO_SEARCH_PATH)
 		if(UNLIKELY($execve(argv[1]) < 0)) {
 			perror("execve() failed");
 			return errno;
