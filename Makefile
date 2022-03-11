@@ -30,7 +30,13 @@ ifeq ($(PREFIX),)
 	PREFIX := /usr/local
 endif
 
-COMMON_FLAGS+= -W -Wall -Wextra -Wstrict-aliasing -fno-strict-aliasing "-D_AUTHOR=\"$(AUTHOR)\"" "-D_LICENSE=\"$(LICENSE)\"" "-D_VERSION=\"$(VERSION)\"" "-D_PROJECT=\"$(PROJECT)\"" "-D_DESCRIPTION=\"$(DESCRIPTION)\""
+FEATURES?=
+
+ifneq ($(FEATURES),)
+	FEATURES:=$(addprefix -DFEATURE_,$(FEATURES))
+endif
+
+COMMON_FLAGS+= -W -Wall -Wextra -Wstrict-aliasing -fno-strict-aliasing "-D_AUTHOR=\"$(AUTHOR)\"" "-D_LICENSE=\"$(LICENSE)\"" "-D_VERSION=\"$(VERSION)\"" "-D_PROJECT=\"$(PROJECT)\"" "-D_DESCRIPTION=\"$(DESCRIPTION)\"" $(FEATURES)
 
 TARGET_ARCH?=native
 ifneq ($(TARGET_ARCH),)
