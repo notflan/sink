@@ -19,11 +19,15 @@ Run `make && sudo make install` to build with full optimisations and install `si
 
 To build for debugging, run `make debug`. 
 
-### Compiler flags
-* `-DREPLACE_STDERR` - Add to `CFLAGS` when building a target to re-route the child program's `stderr` stream to the sink as well. By default, it is passed through as default.
-* `-DNO_SEARCH_PATH` - Add to `CFLAGS` when building to prevent the program looking up its argument in the `PATH` environment variable.
-* `-DNO_ENV` - Add to `CFLAGS` when building to prevent `envp` passthrough to the `execve()`'d program.
-* `-DDEBUG_IGNORE_SPLASH` - Do not print project and version info in debug builds on startup.
+### Feature flags
+
+Set the following to the environment variable `FEATURES` when invoking `make` to build with the speficied features' behaviour (e.g. `FEATURES=NO_SEARCH_PATH\ NO_ENV make`.)
+When a debug-mode splash screen is printed, the features the binary was compiled with are also printed.
+
+* `REPLACE_STDERR` - Re-route the child program's `stderr` stream to the sink as well. By default, it is passed through as default.
+* `NO_SEARCH_PATH` - Prevent the program looking up its argument in the `PATH` environment variable.
+* `NO_ENV` - Prevent `envp` passthrough to the `execve()`'d program.
+* `DEBUG_IGNORE_SPLASH` - Do not print project and version info in debug builds on startup.
 
 ### Installation
 The program must have been built before installation, and installation and uninstallation must be done as root.

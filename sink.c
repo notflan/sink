@@ -8,7 +8,8 @@
 
 #include "comp_features.h"
 
-static const enum compiled_features compiled_features = FEATURE_FLAGS;
+__attribute__((used)) // For loading debug binary symbol
+const enum compiled_features sink_compiled_features = FEATURE_FLAGS;
 
 #define r_stdin 0
 #define r_stdout 1
@@ -153,6 +154,7 @@ static inline size_t count_list(const void*const* p)
 	while(*p++) n+=1;
 	return n;
 }
+#if !FEATURE_HAS_FLAG(DEBUG_IGNORE_SPLASH)
 static void print_compiled_features()
 {
 #define _X "\t%s\n"
@@ -176,15 +178,22 @@ static void print_compiled_features()
 #undef X
 #undef _X
 }
+#endif
 static void print_debug_info(int argc, char* const* argv, char* const* envp)
 {
+#ifndef RELEASE
 	fprintf(stderr, "[DEBUG BUILD]\n");
+#else
+	fprintf(stderr, "[RELEASE BUILD]\n");
+#endif
+
 #if ! FEATURE_HAS_FLAG(DEBUG_IGNORE_SPLASH)
 	fprintf(stderr,  _PROJECT " v" _VERSION ": " _DESCRIPTION "\n");
-	fprintf(stderr, " :: written by " _AUTHOR " with <3 (License " _LICENSE ")\n---\n");
-#endif
-	fprintf(stderr, "> features:\n");
+	fprintf(stderr, " :: written by " _AUTHOR " with <3 (License " _LICENSE ")\n");
+	fprintf(stderr, "Built with features:\n");
 	print_compiled_features();
+	fprintf(stderr, "---\n");
+#endif
 
 	fprintf(stderr, "> program: %s (path lookup: "
 #if FEATURE_HAS_FLAG(NO_SEARCH_PATH)

@@ -19,7 +19,7 @@
 # * `STRIP` - Strip command for default output (stripped release) target (`make sink`). set `make STRIP=:` to prevent stripping entirely. (NOTE: When using `make install`, `STRIP=:` will not work, instead, paradoxically, set `STRIP=true`, they have the same effect for all targets)
 PROJECT=sink
 DESCRIPTION=sink all input and output of a program to /dev/null
-VERSION=0.1.0
+VERSION=0.2.0
 AUTHOR=Avril <avril@cumallover.me>
 LICENSE=GPL3+
 
