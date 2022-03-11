@@ -6,6 +6,10 @@
 #include <limits.h>
 #include <errno.h>
 
+#include "comp_features.h"
+
+static const enum compiled_features compiled_features = FEATURE_FLAGS;
+
 #define r_stdin 0
 #define r_stdout 1
 #define r_stderr 2
@@ -149,15 +153,41 @@ static inline size_t count_list(const void*const* p)
 	while(*p++) n+=1;
 	return n;
 }
+static void print_compiled_features()
+{
+#define _X "\t%s\n"
+#define X(name) fprintf(stderr, _X, FEATURE_STRING(FEATURE_FLAGS, name))
+	X(REPLACE_STDERR);
+	X(NO_SEARCH_PATH);
+	X(NO_ENV);
+	X(DEBUG_IGNORE_SPLASH);
+	fprintf(stderr, "Build mode: \n\t"
+#if defined(DEBUG) && defined(RELEASE)
+			"release (+debug paths)"
+#elif defined(DEBUG)
+			"debug"
+#elif degined(RELEASE)
+			"release"
+#else
+			"unknown"
+#endif
+			"\n");
+
+#undef X
+#undef _X
+}
 static void print_debug_info(int argc, char* const* argv, char* const* envp)
 {
 	fprintf(stderr, "[DEBUG BUILD]\n");
-#ifndef DEBUG_IGNORE_SPLASH
+#if ! FEATURE_HAS_FLAG(DEBUG_IGNORE_SPLASH)
 	fprintf(stderr,  _PROJECT " v" _VERSION ": " _DESCRIPTION "\n");
 	fprintf(stderr, " :: written by " _AUTHOR " with <3 (License " _LICENSE ")\n---\n");
 #endif
+	fprintf(stderr, "> features:\n");
+	print_compiled_features();
+
 	fprintf(stderr, "> program: %s (path lookup: "
-#ifdef NO_SEARCH_PATH
+#if FEATURE_HAS_FLAG(NO_SEARCH_PATH)
 							"false"
 #else
 							"true"
