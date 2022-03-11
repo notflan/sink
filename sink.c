@@ -70,18 +70,11 @@ static int save_stderr()
 		perror("failed to pdup(stderr)");
 		return 0;
 	}
-#if 0
-	int sfd = fileno(stderr);
-	if(UNLIKELY( dup2(b_stderr, sfd) < 0 )) {
-		perror("failed to dup2() to stderr");
-		return 0;
-	} //else if(UNLIKELY( pfd(sfd) < 0 )) return (perror("failed to (redundantly?) FD_CLOEXEC b_stderrr"),0); // TODO: XXX: Does dup2() copy the CLOEXEC flag? Find out, and it it does, remove this line.
-#else
+
 	if(UNLIKELY( !fdreopen(&stderr, b_stderr, "wb") )) {
 		perror("failed to reopen parent stderr with pdup()'d stream");
 		return 0;
 	}
-#endif
 	return 1;
 }
 
