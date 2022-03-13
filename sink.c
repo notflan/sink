@@ -8,6 +8,8 @@
 
 #include "comp_features.h"
 
+#include "args.h"
+
 __attribute__((used)) // For loading debug binary symbol
 const enum compiled_features sink_compiled_features = FEATURE_FLAGS;
 
@@ -206,8 +208,15 @@ static void print_debug_info(int argc, char* const* argv, char* const* envp)
 #define print_debug_info(a,b,c) ((void)((void)(a), (void)(b), (void)(c)))
 #endif
 
+static bool parse_args(int *restrict argc, char** *restrict argv, char** *restrict envp)
+{
+	return a_parse(argc, argv, envp) == A_P_OK   || true; //TODO: Print proper error messages on failures.
+}
+
 int main(int argc, char** argv, char** envp)
 {
+	if(!parse_args(&argc, &argv, &envp)) return 1;
+
 #if FEATURE_HAS_FLAG(NO_ENV)
 	(void)envp;
 #define GET_ENV ((char*[]){NULL})
