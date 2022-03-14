@@ -19,6 +19,9 @@ Short arguments can be chained together: `-abc` is equal to `-a -b -c`. There ca
 * `-O`	No replace `stderr`
 * `-E`	No replace `stderr` (**default** *without feature* `REPLACE_STDERR`)
 
+* `-p`	`envp` passthrough, including optional modifications. (see `--env`.) (**default** *without feature* `NO_ENV`)
+* `-P`	No `envp` passthrough, **except** optional modifications. (see `--env`.) (*default with feature* `NO_ENV`)
+
 # **TODO** Other options
 * **TODO** Specific fd passthrough (*probably long arg, could also possibly be short args for std{in,out,err} streams specifically*)
 * **TOTO** CLOEXEC control (*short arg*)
