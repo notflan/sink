@@ -6,6 +6,10 @@ Short arguments can be chained together: `-abc` is equal to `-a -b -c`. There ca
 # **TODO** Long arguments
 
 * **TODO** User-set sink file path (e.g `--path /path/to/sink`) which overrides the default `/dev/null`.
+* `--env <file>` - Read environment variables, line-by-line, from `<file>` in the format `KEY=value` and send that as the program's `envp`. Multiple of these can exist, they are concatenated.
+(example usage: `LD_PRELOAD=malicious.so sink --env <(env | grep ^LD_PRELOAD) setuid-binary`)
+* `--env=[<key>=<value>]` - Add (or replace) `<key>=<value>` to/in `envp`. Multiple of these can exist. 
+(example usage: `sink --env=LD_PRELOAD=replace.so binary`)
 
 # Short Arguments
 * `-i`	Replace `stdin` (**default**)
