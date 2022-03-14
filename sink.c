@@ -210,7 +210,7 @@ static void print_debug_info(int argc, char* const* argv, char* const* envp)
 
 static bool parse_args(int *restrict argc, char** *restrict argv, char** *restrict envp)
 {
-	return a_parse(argc, argv, envp) == A_P_OK   || true; //TODO: Print proper error messages on failures.
+	return a_parse(argc, argv, envp) /* == NULL */ || true; //TODO: Print proper error messages on failures.
 }
 
 int main(int argc, char** argv, char** envp)

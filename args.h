@@ -6,19 +6,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-enum arg_parse_result {
+enum arg_parse_error_kind {
 	A_PF_UNKNOWN = -1,
 	A_P_OK = 0,
 
 	// TODO: specific errors... 
 };
 
-typedef struct {
+typedef struct arg_parsed {
 	struct {
 		bool in,out,err;
 	} replace; // { 1, 1, 0 }
 
-	const char* target; // NULL -> default "/dev/null"
+	char* target; // NULL -> default "/dev/null"
 
 	struct {
 		/*struct _Alignas(uint64_t) {
@@ -31,6 +31,19 @@ typedef struct {
 	}* restrict fd_pass; // A_FD_PASS_NONE
 
 } pargs_t;
+
+struct arg_parse_error {
+	enum arg_parse_error_kind kind;
+	union {
+		struct{} none;
+	} _data;
+};
+_Static_assert(sizeof(  ((struct arg_parse_error*)(0))->_data ) == 0, "Bad union ZST");
+
+union arg_parse_result {
+	struct arg_parsed ok;
+	struct arg_parse_error err;
+};
 
 #define A_FD_PASS_ALL  ((void*)(~((uintptr_t)0ul)))
 #define A_FD_PASS_NONE NULL
@@ -53,16 +66,28 @@ _a_inline_proto const pargs_t* a_get_program_args()
 _a_inline_proto bool a_is_parsed() 
 { return parsed_args != NULL; }
 
-enum arg_parse_result a_parse_into(pargs_t *restrict parsed, int *restrict argc, char** *restrict p_argv, char** *restrict p_envp);
+/// Create an `pargs_t.fd_pass` value for `n` fds.
+void* a_pass_fds(size_t n, ...);
+/// Create an `pargs_t.fd_pass` value for `n` fds from the array `ar`.
+void* a_pass_fds_a(size_t n, int ar[const restrict n]);
 
-_a_inline_proto // TODO: XXX: Is this worth it?
-enum arg_parse_result a_parse(int *restrict argc, char** *restrict p_argv, char** *restrict p_envp)
-{
-	static pargs_t glob_parsed_args; //XXX: Wth is this an error?
-	enum arg_parse_result r = a_parse_into(&glob_parsed_args, argc, p_argv, p_envp);
+bool a_parse_into(union arg_parse_result *restrict parsed, int *restrict argc, char** *restrict p_argv, char** *restrict p_envp);
+const struct arg_parse_error* a_parse(int *restrict argc, char** *restrict p_argv, char** *restrict p_envp);
 
-	if(!r) parsed_args = &glob_parsed_args; // A_P_OK
-	return r;
-}
+/// Clone a `pargs_t` struct. The returned struct pointer must be freed with `a_free()`.
+pargs_t* a_clone_args(const pargs_t* args);
+
+/// Clone a `struct arg_parse_error`. The returned struct pointer must be freed with `a_free_args()`, then with stdlib `free()` itself.
+struct arg_parse_error* a_clone_error(const struct arg_parse_error* error);
+
+/// Free the internals of a `pargs_t` struct.
+void a_free_args(const pargs_t* args);
+
+/// Free the internals of an `arg_parse_error` struct.
+void a_free_error(const struct arg_parse_error* error);
+
+/// Free a `malloc()` or `a_clone_args()`'d `pargs_t` struct (NOTE: do *not* pass the result of `a_get_program_args()` or `parsed_args` to this, use `a_free_args()` for those instead.
+void a_free(pargs_t* restrict args);
+
 #undef _a_inline_proto
 #endif /* _ARGS_H */
