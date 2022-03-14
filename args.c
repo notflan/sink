@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdarg.h>
 
+#include "view.h"
+
 #include "args.h"
 
 #define _PASTE_(x, y) x ## y

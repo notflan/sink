@@ -8,6 +8,7 @@
 
 #include "comp_features.h"
 
+//#include "view.h"
 #include "args.h"
 
 __attribute__((used)) // For loading debug binary symbol
