@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #include "view.h"
 
@@ -74,16 +75,39 @@ static struct string_data* _s_data(char* str, bool check) {
 }
 
 __attribute__((pure))
-str_info_t s_get_info(sv_t str) 
+str_info_t s_get_info(view_t str) 
 {
 	return _s_data($nullchk(str.ptr, return NULL), true);
 }
 
 __attribute__((pure))
-sv_t s_get_str(str_info_t data) 
+view_t s_get_str(str_info_t data) 
 { 
-	return (sv_t) {
+	return (view_t) {
 		.len = data->len,
-		.ptr = (unsigned char*)data->ptr,
+		.ptr = data->ptr,
 	};
+}
+
+__attribute__((cold))
+static size_t _sv_copy_manual(size_t sz, char buffer[restrict static sz], view_t view)
+{
+	size_t i=0;
+	for(;i< (sz-1) && i<view.len;i++)
+	{
+		buffer[i] = view.ptr[i];
+	}
+	buffer[i] = 0;
+	return view.len+1;
+}
+
+size_t sv_copy_to(size_t sz, char buffer[restrict static sz], view_t view)
+{
+	if(__builtin_expect(view.len <= INT_MAX, true))
+		return (size_t)snprintf(buffer, sz, "%.*s", (int)view.len, view.ptr);
+	else {
+		// Manual implementation, for views longer than INT_MAX
+		//XXX: TODO: Ensure return value follows the same construct.
+		return _sv_copy_manual(sz, buffer, view);
+	}
 }
