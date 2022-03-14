@@ -6,6 +6,8 @@
 
 #include "args.h"
 
+#include "comp_features.h"
+
 #define _PASTE_(x, y) x ## y
 #define _PASTE(x, y) _PASTE_(x, y)
 
@@ -19,6 +21,115 @@
 			_box_name(pT); })
 
 typedef __typeof( *((pargs_t*)0)->fd_pass ) fd_pass_t;
+typedef __typeof( ((pargs_t*)0)->replace ) replace_t;
+
+struct input_arguments
+{
+	int *restrict p_argc;
+	char** *restrict p_argv;
+	char** *restrict p_envp;
+};
+
+typedef bool (single_arg_parse_func)(int, const char*, struct input_arguments* restrict, pargs_t*);
+typedef void (single_arg_error_func)(struct arg_parse_error* restrict);
+
+enum argument_type {
+	AT_SHORT = 0,
+	AT_LONG,
+	AT_LONG_EQ,
+
+	AT_LONG_OR_EQ = AT_LONG | AT_LONG_EQ,
+};
+
+struct argument_parser {
+	union {
+		const char* l;
+		char s;
+	} name;
+
+	enum argument_type kind;
+
+	bool is_default;
+
+	const char* destription;
+	const char* example;
+
+	single_arg_parse_func* parse;
+	single_arg_error_func* error;
+};
+
+typedef __typeof( ((struct argument_parser*)0)->name ) av_name_t;
+
+static bool _si_handle_replace(int idx, const char* arg, struct input_arguments* restrict in, pargs_t* out)
+{
+	char c;
+	bool* restrict repl;
+	switch(c = *arg) {
+		case 'i':
+		case 'I': 
+			repl = &out->replace.in;
+			break;
+		case 'o': 
+		case 'O':
+			repl = &out->replace.out;
+			break;
+		case 'e': 
+		case 'E': 
+			repl = &out->replace.err;
+			break;
+		default: return false;
+	}
+	*repl = !(c & 0x20);
+	return true;
+}
+
+static const struct argument_parser AV_ARGS[] = {
+	{ { .s= 'i' }, AT_SHORT, true, "Sink stdin", NULL, _si_handle_replace, NULL },
+	{ { .s='o' }, AT_SHORT, true, "Sink stdout", NULL, _si_handle_replace, NULL },
+	{ { .s='e' }, AT_SHORT, false, "Sink stderr", NULL, _si_handle_replace, NULL },
+
+	{ { .s='I' }, AT_SHORT, false, "Keep stdin", NULL, _si_handle_replace, NULL },
+	{ { .s='O' }, AT_SHORT, false, "Keep stdout", NULL, _si_handle_replace, NULL },
+	{ { .s='E' }, AT_SHORT, true, "Keep stderr", NULL, _si_handle_replace, NULL },
+};
+#define AV_ARGS_SZ (sizeof(AV_ARGS) / sizeof(struct argument_parser))
+
+static inline bool _av_long_extract_name(const char* name, enum argument_type ty, view_t* restrict out)
+{
+	register bool ok = true;
+	switch(ty) {
+		case AT_LONG_EQ:
+			ok = !!sv_split_cstr(name, '=', out, NULL);
+			break;
+		case AT_LONG_OR_EQ:
+			if(!sv_split_cstr(name, '=', out, NULL)) {
+				if(0)
+		case AT_SHORT:	name = (const char[2]){*name, 0};
+				*out = sv_from_cstr(name);
+			}
+			break;
+		default: return false;
+	}
+	return ok;
+}
+
+static inline const struct argument_parser* _av_lookup(av_name_t name, enum argument_type ty)
+{
+	for(size_t i=0;i<AV_ARGS_SZ;i++) {
+		const struct argument_parser* current = AV_ARGS+i;
+		if(__builtin_constant_p(ty) && ty == AT_SHORT) {
+			if(current->name.s == name.s) return current;
+		} else switch(ty) {
+			case AT_SHORT: if(current->name.s == name.s) return current;
+			default: {
+				view_t real_name;
+				if(!_av_long_extract_name(name.l, ty, &real_name)) continue; // Argument requires `=` but one wasn't fount, continue.
+				if(sv_eq_cstr(real_name, current->name.l)) return current;
+			} break;
+		}
+	}
+	return NULL;
+}
 
 const pargs_t* parsed_args = NULL;
 static const pargs_t default_args[1] = { A_DEFAULT_ARGS }; //A_DEFAULT_ARGS_P;
@@ -143,11 +254,65 @@ const pargs_t* a_get_program_args() {
 
 bool a_is_parsed() { return parsed_args != NULL; }
 
-bool a_parse_into(union arg_parse_result *restrict parsed, int *restrict argc, char** *restrict p_argv, char** *restrict p_envp)
+static bool a_parse__short(int i, const char* arg, struct input_arguments in, pargs_t* restrict out)
 {
-	//TODO
-	parsed->err = (struct arg_parse_error) { .kind = A_PF_UNKNOWN, ._data = { .none = {} } };
-	return false;
+	const struct argument_parser* p = _av_lookup( (av_name_t){ .s = *arg, }, AT_SHORT );
+	if(!p) return false;
+	else {
+		if(!p->parse(i, arg, &in, out)) {
+			if(p->error) {
+				//TODO: How to handle returning `struct arg_parse_error`? Make `out` union arg_parse_result* restrict` instead?
+			}
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool a_parse__long(int i, const char* arg, struct input_arguments in, pargs_t* restrict out)
+{
+	//TODO: determine if `arg` is `k=v` or not
+	bool is_eq = /* TODO */ false;
+	const struct argument_parser* p = _av_lookup( (av_name_t){ .l = arg, }, is_eq ? AT_LONG_EQ : AT_LONG );
+	if(!p) return false;
+	else {
+		//TODO :if(!p->parse(
+	}
+
+	return true;
+}
+
+inline static bool _a_parse_into(union arg_parse_result *restrict parsed, struct input_arguments input)
+{
+	bool ok = true;;
+	pargs_t args = A_DEFAULT_ARGS;
+	
+	//TODO: Parse arguments
+
+_end:
+	if(ok)
+_set_ok:	parsed->ok = args;
+	else 
+_set_err:	parsed->err = (struct arg_parse_error) { .kind = A_PF_UNKNOWN, ._data = { .none = {} } };
+
+	return ok;
+}
+
+
+inline bool a_parse_into(union arg_parse_result *restrict parsed, int *restrict p_argc, char** *restrict p_argv, char** *restrict p_envp)
+{
+#if FEATURE_HAS_FLAG(NO_ARGS)
+	parsed->ok = A_DEFAULT_ARGS;
+	return true;
+#else
+	struct input_arguments input = {
+		p_argc,
+		p_argv,
+		p_envp,
+	};
+
+	return _a_parse_into(parsed, input);
+#endif
 }
 
 const struct arg_parse_error* a_parse(int *restrict argc, char** *restrict p_argv, char** *restrict p_envp)
