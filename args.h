@@ -30,6 +30,8 @@ typedef struct arg_parsed {
 		int fds[];
 	}* restrict fd_pass; // A_FD_PASS_NONE
 
+	char** env_pass; // A_ENV_PASS_ALL
+
 } pargs_t;
 
 struct arg_parse_error {
@@ -38,17 +40,20 @@ struct arg_parse_error {
 		struct{} none;
 	} _data;
 };
-_Static_assert(sizeof(  ((struct arg_parse_error*)(0))->_data ) == 0, "Bad union ZST");
+_Static_assert(sizeof(  ((struct arg_parse_error*)(0))->_data.none ) == 0, "Bad union ZST");
 
 union arg_parse_result {
 	struct arg_parsed ok;
 	struct arg_parse_error err;
 };
 
+#define A_ENV_PASS_ALL NULL
+#define A_ENV_PASS_NONE  ((void*)(~((uintptr_t)0ul)))
+
 #define A_FD_PASS_ALL  ((void*)(~((uintptr_t)0ul)))
 #define A_FD_PASS_NONE NULL
 
-#define A_DEFAULT_ARGS ((pargs_t){ { true, true, false}, NULL, A_FD_PASS_NONE })
+#define A_DEFAULT_ARGS ((pargs_t){ { true, true, false}, NULL, A_FD_PASS_NONE, A_ENV_PASS_ALL })
 #define A_DEFAULT_ARGS_P ((pargs_t[1]) { A_DEFAULT_ARGS } )
 
 extern const pargs_t* parsed_args;
