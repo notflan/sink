@@ -55,6 +55,7 @@ DEBUG_LDFLASG+=-Wl,-g
 CFLAGS   += $(COMMON_FLAGS) --std=gnu2x
 LDFLAGS  +=
 
+#TODO: Find a way to make this check `ifeq SHARED,no` on debug target
 ifneq ($(SHARED),yes)
 	CFLAGS+=--static
 endif
