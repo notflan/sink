@@ -52,7 +52,7 @@ RELEASE_LDFLAGS+= -Wl,-O3 -Wl,-flto
 DEBUG_CFLAGS+=-Og -g3 -ggdb -gz -DDEBUG
 DEBUG_LDFLASG+=-Wl,-g
 
-CFLAGS   += $(COMMON_FLAGS) --std=gnu17
+CFLAGS   += $(COMMON_FLAGS) --std=gnu2x
 LDFLAGS  +=
 
 ifneq ($(SHARED),yes)
