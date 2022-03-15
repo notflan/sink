@@ -5,6 +5,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+/// Printf format string for `view_t`
+#define SV_PRINT_FMT "%.*s"
+/// Printf format arguments for `view_t` to match the position of `SV_PRINT_FMT`
+#define SV_PRINT_ARG(view) (int)(view).len, (view).ptr
+
 typedef struct string_view {
 	size_t len;
 	char* ptr;
@@ -35,6 +40,12 @@ extern inline size_t sv_split_cstr(const char* p, char on, view_t* restrict firs
 /// Copy `view` into nul-terminated `buffer`, up to `size` bytes. Return the number of bytes that would've been copied regardless of `sz` (incl. nul-terminator)
 size_t sv_copy_to(size_t sz, char buffer[restrict static sz], view_t view);
 char* sv_to_cstr(view_t view, char* restrict buffer, size_t n);
+
+// sprintf-like
+size_t sv_svnprintf(view_t* restrict out, size_t sz, view_t fmt, ...);
+size_t sv_svprintf(view_t* restrict out, view_t fmt, ...);
+size_t sv_sprintf(view_t* restrict out, const char* fmt, ...);
+size_t sv_snprintf(view_t* restrict out, size_t sz, const char* fmt, ...);
 
 __attribute__((__gnu_inline__, malloc))
 extern inline char* sv_dupto_cstr(view_t view) 

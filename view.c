@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <stdarg.h>
 
 #include "view.h"
 
@@ -103,23 +104,29 @@ view_t s_get_str(str_info_t data)
 	};
 }
 
-__attribute__((cold))
-static size_t _sv_copy_manual(size_t sz, char buffer[restrict static sz], view_t view)
+__attribute__((__always_inline__, __gnu_inline__, artificial))
+inline static size_t _sv_copy_manual(size_t sz, char buffer[restrict static sz], view_t view)
 {
+	
+	memcpy(buffer, view.ptr, sz = min((sz-1), view.len));
+	/*
 	size_t i=0;
 	for(;i< (sz-1) && i<view.len;i++)
 	{
 		buffer[i] = view.ptr[i];
-	}
-	buffer[i] = 0;
+	}*/
+	buffer[sz] = 0;
 	return view.len+1;
 }
 
-size_t sv_copy_to(size_t sz, char buffer[restrict static sz], view_t view)
+inline size_t sv_copy_to(size_t sz, char buffer[restrict static sz], view_t view)
 {
+#ifdef _VIEW_USE_SNPRINTF_INTERNAL
 	if(__builtin_expect(view.len <= INT_MAX, true))
 		return (size_t)snprintf(buffer, sz, "%.*s", (int)view.len, view.ptr);
-	else {
+	else 
+#endif
+	{
 		// Manual implementation, for views longer than INT_MAX
 		//XXX: TODO: Ensure return value follows the same construct.
 		return _sv_copy_manual(sz, buffer, view);
@@ -213,6 +220,65 @@ bool sv_eq(view_t a, view_t b)
 	return a.len == b.len && (__builtin_expect(a.ptr == b.ptr, false) || memcmp(a.ptr, b.ptr, a.len));
 }
 
+/* Not useful.
+int sv_fprintf(FILE* out, view_t fmt, ...)
+{
+	va_list va;
+	char rfmt[fmt.len+1];
+	va_start(va, fmt);
+	sv_copy_to(fmt.len+1, rfmt, fmt);
 
+	int r =vfprintf(out, rfmt, va);
 
+	va_end(va);
+	return r;
+}*/
 
+inline static size_t sv_vsnprintf(view_t* restrict out, size_t sz, const char* fmt, va_list args)
+{
+	if(__builtin_expect(out!=NULL, true))
+		return vsnprintf(out->ptr, min(out->len, sz), fmt, args);
+	else 	return vsnprintf((char[]){}, 0, fmt, args);
+}
+
+size_t sv_vsvnprintf(view_t* restrict out, size_t sz, view_t fmt, va_list args)
+{
+	char buffer[fmt.len+1];
+	sv_copy_to(fmt.len+1, buffer, fmt);
+	return sv_vsnprintf(out, sz, buffer, args);
+}
+
+size_t sv_snprintf(view_t* restrict out, size_t sz, const char* fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	size_t r = sv_vsnprintf(out, sz, fmt, va);
+	va_end(va);
+	return r;
+}
+
+size_t sv_sprintf(view_t* restrict out, const char* fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	size_t r = sv_vsnprintf(out, out ? out->len : 0, fmt, va);
+	va_end(va);
+	return r;
+}
+size_t sv_svnprintf(view_t* restrict out, size_t sz, view_t fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	size_t r = sv_vsvnprintf(out, sz, fmt, va);
+	va_end(va);
+	return r;
+}
+
+size_t sv_svprintf(view_t* restrict out, view_t fmt, ...)
+{
+	va_list va;
+	va_start(va, fmt);
+	size_t r = sv_vsvnprintf(out, out ? out->len : fmt.len, fmt, va);
+	va_end(va);
+	return r;
+}
